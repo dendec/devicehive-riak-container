@@ -1,6 +1,7 @@
 version: "2"
 services:
   coordinator:
+    build: .
     image: devicehive/riak-ts
     ports:
       - "8087:8087"
@@ -12,7 +13,8 @@ services:
     volumes:
       - schemas:/etc/riak/schemas
   member:
-    image: basho/riak-ts
+    build: .
+    image: devicehive/riak-ts
     ports:
       - "8087"
       - "8098"
