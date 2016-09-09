@@ -1,4 +1,4 @@
-FROM basho/riak-ts
+FROM basho/riak-ts:1.3.1
 MAINTAINER devicehive
 
 RUN mkdir /etc/riak/dh-mr && mkdir /etc/riak/dh-mr/ebin
