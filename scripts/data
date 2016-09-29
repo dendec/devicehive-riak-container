@@ -3,3 +3,4 @@
 {"name":"John","age":11}
 {"name":"Alex","age":18}
 {"name":"Anna","age":25}
+{"name":"Sara","age":34,"pet":{"type":"cat","name":"Fluffy","age":3}}

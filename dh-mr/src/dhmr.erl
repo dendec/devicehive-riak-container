@@ -28,15 +28,21 @@ reduce_filter(List, Arg) ->
 	end.
 
 reduce_filter(List, ParamName, Value, Comparator) ->
-	lists:filter(fun(Object) -> Comparator(proplists:get_value(ParamName, Object), Value) end, List).
+	FilerFun = fun(Object) -> 
+		case get_value(ParamName, Object) of
+			undefined -> false;
+			ObjectValue -> Comparator(ObjectValue, Value)
+		end
+	end,
+	lists:filter(FilerFun, List).
 
 %% @doc Data sorting. Argument is a list with two elements: parameter name and order {asc, desc}
 reduce_sort(List, Arg) -> 
 	case Arg of
 		[ParamName, Order] ->
 			case string:to_lower(binary_to_list(Order)) of 
-				"asc" -> lists:sort(fun(O1, O2) -> proplists:get_value(ParamName, O1) < proplists:get_value(ParamName, O2) end, List);
-				"desc" -> lists:sort(fun(O1, O2) -> proplists:get_value(ParamName, O1) > proplists:get_value(ParamName, O2) end, List)
+				"asc" -> lists:sort(fun(O1, O2) -> get_value(ParamName, O1) < proplists:get_value(ParamName, O2) end, List);
+				"desc" -> lists:sort(fun(O1, O2) -> get_value(ParamName, O1) > proplists:get_value(ParamName, O2) end, List)
 			end
 	end.
 
@@ -45,3 +51,18 @@ reduce_offset_with_limit(List, Arg) ->
 	case Arg of
 		[Offset, Limit] -> lists:sublist(List, Offset, Limit)
 	end.
+
+get_value(Property, Object) ->
+	get_value_from_tokens(string:tokens(binary_to_list(Property), "."), Object).
+
+get_value_from_tokens(Tokens, Object) ->
+	case Tokens of
+		[H|T] -> 
+			case proplists:get_value(list_to_binary(H), Object) of
+				{struct, SubObject} -> get_value_from_tokens(T, SubObject);
+				undefined -> undefined;
+				SubObject -> get_value_from_tokens([], SubObject)
+			end;
+		[] -> Object
+	end.
+		
