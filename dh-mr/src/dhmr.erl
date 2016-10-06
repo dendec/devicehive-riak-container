@@ -1,7 +1,7 @@
 %%% @doc DeviceHive map reduce functions
 -module(dhmr).
 
--export([map_values/3, reduce_filter/2, reduce_sort/2, reduce_offset_with_limit/2]).
+-export([map_values/3, reduce_filter/2, reduce_sort/2, reduce_pagination_filter/2, reduce_add_index/2, reduce_delete_index/2]).
 
 %% @doc json decode of existed object's value
 map_values(Object, _Keydata, _Arg) ->
@@ -60,21 +60,42 @@ reduce_sort(List, [ParamName, Order]) ->
                        end, List)
     end.
 
-%% @doc Data pagination. Argument is a list with two elements: offset and limit
-reduce_offset_with_limit(List, [Offset, Limit]) ->
-    lists:sublist(List, Offset, Limit).
+%% @doc Data pagination. Argument is a list with two elements: skip and count.
+%% Objects in list should have following structure {"index": _, "object": _}. Use reduce_add_index.
+reduce_pagination_filter(List, [Skip, Count]) ->
+	FilerFun = fun(Object) ->
+        case get_value(<<"index">>, Object) of
+            undefined -> true;
+            Index -> (Index > Skip) and (Index =< Skip + Count)
+        end
+    end,
+    lists:filter(FilerFun, List).
 
-get_value(Property, Object) ->
-    get_value_from_tokens(string:tokens(binary_to_list(Property), "."), Object).
+%% @doc Add index to objects in list
+%% Returns list with objects like {"index": _, "object": _}.
+reduce_add_index(List, _Arg) ->
+	ListWithIndexes = lists:zip(lists:seq(1, length(List)), List),
+	lists:map(fun ({Index, Object}) -> [{<<"index">>, Index}, {<<"object">>, Object}] end, ListWithIndexes).
 
-get_value_from_tokens([H | T], Object) ->
+%% @doc Delete index from objects in list
+reduce_delete_index(List, _Arg) ->
+	lists:map(fun delete_index/1, List).
+
+delete_index([{<<"index">>, _}, {<<"object">>, Object}]) ->
+	delete_index(Object);
+delete_index(Object) ->
+	Object.
+
+get_value([H | T], Object) ->
     case proplists:get_value(list_to_binary(H), Object) of
         {struct, SubObject} ->
-            get_value_from_tokens(T, SubObject);
+            get_value(T, SubObject);
         undefined ->
             undefined;
         SubObject ->
-            get_value_from_tokens([], SubObject)
+            get_value([], SubObject)
     end;
-get_value_from_tokens([], Object) ->
-    Object.
+get_value([], Object) ->
+    Object;
+get_value(Property, Object) ->
+    get_value(string:tokens(binary_to_list(Property), "."), Object).
