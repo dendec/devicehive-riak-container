@@ -35,7 +35,9 @@ reduce_filter(List, [ParamName, Operator, Value]) ->
                                   {match, _} -> true;
                                   nomatch -> false
                               end
-                          end)
+                          end);
+		"in" -> reduce_filter(List, ParamName, Value,
+                          fun(Val, CheckList) -> lists:member(Val, CheckList) end)
     end.
 
 reduce_filter(List, ParamName, Value, Comparator) ->
